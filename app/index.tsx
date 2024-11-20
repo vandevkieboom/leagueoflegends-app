@@ -1,17 +1,21 @@
-import { Text, View } from "react-native";
+import ChampionList from '../components/ChampionList';
+import React from 'react';
+import { View, StyleSheet } from 'react-native';
 
 const Index = () => {
   return (
-    <View
-      style={{
-        flex: 1,
-        justifyContent: "center",
-        alignItems: "center",
-      }}
-    >
-      <Text>Edit app/index.tsx to edit this screen.</Text>
+    <View style={styles.container}>
+      <ChampionList />
     </View>
   );
-}
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    paddingHorizontal: 10,
+    backgroundColor: 'black',
+  },
+});
 
 export default Index;
