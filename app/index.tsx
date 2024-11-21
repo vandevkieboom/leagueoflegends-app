@@ -1,67 +1,157 @@
-import React, { useState } from 'react';
-import { View, StyleSheet, FlatList, TouchableOpacity, Image, Text, TextInput } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, StyleSheet, FlatList, TouchableOpacity, Image, Text, TextInput, ActivityIndicator } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { fetchChampions } from '@/api';
-import { Champion } from '@/types';
+import { Champion, Tag } from '@/types';
+import OptionsModal from '@/components/OptionsModal';
 
 interface IndexProps {
   searchBarVisible: boolean;
+  sortModalVisible: boolean;
+  setSortModalVisible: React.Dispatch<React.SetStateAction<boolean>>;
+  filterModalVisible: boolean;
+  setFilterModalVisible: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-const Index = ({ searchBarVisible }: IndexProps) => {
+const Index = ({
+  searchBarVisible,
+  sortModalVisible,
+  setSortModalVisible,
+  filterModalVisible,
+  setFilterModalVisible,
+}: IndexProps) => {
   const [search, setSearch] = useState<string>('');
+  const [filteredChampions, setFilteredChampions] = useState<Champion[]>([]);
+  const [sortOption, setSortOption] = useState<string>('name');
+  const [filterOption, setFilterOption] = useState<string[]>([]);
   const [bookmarked, setBookmarked] = useState<{ [key: string]: boolean }>({});
 
-  const { data: champions } = useQuery<Champion[]>({
+  const {
+    data: champions,
+    error: championsError,
+    isLoading: isLoadingChampions,
+  } = useQuery<Champion[]>({
     queryKey: ['champions'],
     queryFn: fetchChampions,
   });
 
-  const filteredChampions = champions?.filter((champion) => champion.name.toLowerCase().includes(search.toLowerCase()));
+  useEffect(() => {
+    if (champions) {
+      let updatedChampions = [...champions];
+      if (search) {
+        updatedChampions = updatedChampions.filter((champion) =>
+          champion.name.toLowerCase().includes(search.toLowerCase())
+        );
+      }
+      if (filterOption.length > 0) {
+        updatedChampions = updatedChampions.filter((champion) =>
+          filterOption.some((tag) => champion.tags.includes(tag as Tag))
+        );
+      }
+      if (sortOption === 'name') {
+        updatedChampions.sort((a, b) => a.name.localeCompare(b.name));
+      } else if (sortOption === 'difficulty') {
+        updatedChampions.sort((a, b) => a.info.difficulty - b.info.difficulty);
+      }
+      setFilteredChampions(updatedChampions);
+    }
+  }, [champions, search, sortOption, filterOption]);
 
   const toggleBookmark = (id: string) => {
     setBookmarked((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
+  const handleSort = (option: string) => {
+    setSortOption(option);
+    setSortModalVisible(false);
+  };
+
+  const handleFilter = (tag: string) => {
+    let updatedFilterOption = [tag];
+    if (filterOption.includes(tag)) {
+      updatedFilterOption = [];
+    }
+    setFilterOption(updatedFilterOption);
+    setFilterModalVisible(false);
+  };
+
+  if (isLoadingChampions) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="fff" />
+        <Text style={styles.loadingText}>Gegevens laden...</Text>
+      </View>
+    );
+  }
+
+  if (championsError) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>An error occurred while loading the data.</Text>
+      </View>
+    );
+  }
+
   return (
-    <View style={styles.container}>
-      {searchBarVisible && (
-        <TextInput
-          placeholder="Search Champion"
-          placeholderTextColor="gray"
-          onChangeText={setSearch}
-          style={styles.textInput}
-        />
-      )}
-      <FlatList
-        data={filteredChampions}
-        key={`columns-${3}`}
-        keyExtractor={(item) => item.id.toString()}
-        numColumns={3}
-        renderItem={({ item }) => (
-          <TouchableOpacity style={styles.item} onPress={() => alert(item.name)} activeOpacity={0.5}>
-            <View />
-            <Image source={{ uri: item.image.loading }} style={styles.image} />
-            <TouchableOpacity style={styles.bookmarkIcon} onPress={() => toggleBookmark(item.id.toString())}>
-              <MaterialIcons
-                name={bookmarked[item.id] ? 'bookmark-added' : 'bookmark-outline'}
-                size={24}
-                color="white"
-              />
-            </TouchableOpacity>
-            <View style={styles.nameContainer}>
-              <Text style={styles.nameText} numberOfLines={1} ellipsizeMode="tail">
-                {item.name}
-              </Text>
-              <Text style={styles.description} numberOfLines={1} ellipsizeMode="tail">
-                {item.title}
-              </Text>
-            </View>
-          </TouchableOpacity>
+    <>
+      <View style={styles.container}>
+        {searchBarVisible && (
+          <TextInput
+            placeholder="Search Champion"
+            placeholderTextColor="gray"
+            onChangeText={setSearch}
+            value={search}
+            style={styles.textInput}
+          />
         )}
+        <FlatList
+          data={filteredChampions}
+          key={`columns-${3}`}
+          keyExtractor={(item) => item.id.toString()}
+          numColumns={3}
+          renderItem={({ item }) => (
+            <TouchableOpacity style={styles.item} onPress={() => alert(item.name)} activeOpacity={0.5}>
+              <View />
+              <Image source={{ uri: item.image.loading }} style={styles.image} />
+              <TouchableOpacity style={styles.bookmarkIcon} onPress={() => toggleBookmark(item.id.toString())}>
+                <MaterialIcons
+                  name={bookmarked[item.id] ? 'bookmark-added' : 'bookmark-outline'}
+                  size={24}
+                  color="white"
+                />
+              </TouchableOpacity>
+              <View style={styles.nameContainer}>
+                <Text style={styles.nameText} numberOfLines={1} ellipsizeMode="tail">
+                  {item.name}
+                </Text>
+                <Text style={styles.description} numberOfLines={1} ellipsizeMode="tail">
+                  {item.title}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          )}
+        />
+      </View>
+
+      <OptionsModal
+        visible={sortModalVisible}
+        onClose={() => setSortModalVisible(false)}
+        onSelect={handleSort}
+        selectedOption={sortOption}
+        options={['name', 'difficulty']}
+        title="Sort Champions"
       />
-    </View>
+
+      <OptionsModal
+        visible={filterModalVisible}
+        onClose={() => setFilterModalVisible(false)}
+        onSelect={handleFilter}
+        selectedOption={filterOption[0]}
+        options={['Assassin', 'Fighter', 'Mage', 'Marksman', 'Support', 'Tank']}
+        title="Filter Champions"
+      />
+    </>
   );
 };
 
@@ -70,6 +160,27 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 10,
     backgroundColor: 'black',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'black',
+  },
+  loadingText: {
+    color: 'white',
+    fontSize: 18,
+    marginTop: 10,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'black',
+  },
+  errorText: {
+    color: 'red',
+    fontSize: 18,
   },
   textInput: {
     borderColor: 'gray',

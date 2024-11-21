@@ -2,16 +2,24 @@ import React, { useEffect, useState } from 'react';
 import { fetchChampions } from '@/api';
 import { Champion } from '@/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { FlatList, View, StyleSheet, Pressable, Image, TextInput, Button, Text, ActivityIndicator } from 'react-native';
+import { FlatList, View, StyleSheet, Pressable, Image, TextInput, Text, ActivityIndicator, Modal } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { getHighScore, saveHighScore } from '@/storage';
+import { getRank, getRankColor } from '../rankUtils';
 
 interface MinigameProps {
   correctGuessCount: number;
   setCorrectGuessCount: React.Dispatch<React.SetStateAction<number>>;
+  highscoresModalVisible: boolean;
+  setHighscoresModalVisible: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-const Minigame = ({ correctGuessCount, setCorrectGuessCount }: MinigameProps) => {
+const Minigame = ({
+  correctGuessCount,
+  setCorrectGuessCount,
+  highscoresModalVisible,
+  setHighscoresModalVisible,
+}: MinigameProps) => {
   const [guess, setGuess] = useState<string>('');
   const [correctGuesses, setCorrectGuesses] = useState<string[]>([]);
   const [inputBorderColor, setInputBorderColor] = useState<string>('gray');
@@ -27,7 +35,7 @@ const Minigame = ({ correctGuessCount, setCorrectGuessCount }: MinigameProps) =>
     queryFn: fetchChampions,
   });
 
-  const { data: highestScore = 0, error: highScoreError } = useQuery<number>({
+  const { data: highScore = 0, error: highScoreError } = useQuery<number>({
     queryKey: ['highScore'],
     queryFn: getHighScore,
   });
@@ -40,7 +48,7 @@ const Minigame = ({ correctGuessCount, setCorrectGuessCount }: MinigameProps) =>
   });
 
   useEffect(() => {
-    if (correctGuessCount > highestScore) {
+    if (correctGuessCount > highScore) {
       mutation.mutate(correctGuessCount);
     }
   }, [correctGuessCount]);
@@ -73,7 +81,7 @@ const Minigame = ({ correctGuessCount, setCorrectGuessCount }: MinigameProps) =>
   if (isLoadingChampions) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#00ff00" />
+        <ActivityIndicator size="large" color="fff" />
         <Text style={styles.loadingText}>Gegevens laden...</Text>
       </View>
     );
@@ -82,7 +90,7 @@ const Minigame = ({ correctGuessCount, setCorrectGuessCount }: MinigameProps) =>
   if (championsError || highScoreError) {
     return (
       <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>Er is een fout opgetreden bij het laden van de gegevens.</Text>
+        <Text style={styles.errorText}>An error occurred while loading the data.</Text>
       </View>
     );
   }
@@ -121,6 +129,27 @@ const Minigame = ({ correctGuessCount, setCorrectGuessCount }: MinigameProps) =>
           <MaterialIcons name="restart-alt" size={34} color="red" />
         </Pressable>
       </View>
+
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={highscoresModalVisible}
+        onRequestClose={() => setHighscoresModalVisible(false)}
+      >
+        <Pressable style={styles.modalContainer} onPress={() => setHighscoresModalVisible(false)}>
+          <View style={[styles.modalContent, { borderColor: getRankColor(getRank(highScore)) }]}>
+            <Text style={[styles.modalTitle, { color: getRankColor(getRank(highScore)) }]}>
+              RANKING: {getRank(highScore).toUpperCase()}
+            </Text>
+            <View style={styles.highScoreContainer}>
+              <Text style={[styles.highScoreText, { color: getRankColor(getRank(highScore)) }]}>
+                {highScore}/{champions?.length}
+              </Text>
+              <Text style={styles.modalText}>Champions</Text>
+            </View>
+          </View>
+        </Pressable>
+      </Modal>
     </View>
   );
 };
@@ -191,6 +220,37 @@ const styles = StyleSheet.create({
   },
   checkIcon: {
     marginRight: 20,
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+  },
+  modalContent: {
+    backgroundColor: '#000',
+    opacity: 0.9,
+    padding: 40,
+    width: '77%',
+    borderRadius: 2,
+    alignItems: 'center',
+    borderWidth: 1,
+  },
+  modalTitle: {
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  highScoreContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  highScoreText: {
+    textAlign: 'center',
+    marginRight: 4,
+  },
+  modalText: {
+    color: 'white',
+    textAlign: 'center',
   },
 });
 

@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useState } from 'react';
 
 export const saveHighScore = async (score: number) => {
   try {
@@ -15,14 +16,5 @@ export const getHighScore = async () => {
   } catch (error) {
     console.error('Failed to fetch high score.', error);
     return 0;
-  }
-};
-
-export const showHighScores = async () => {
-  try {
-    const highestScore = await getHighScore();
-    alert(`Highest Score: ${highestScore}`);
-  } catch (error) {
-    console.error('Failed to show high scores.', error);
   }
 };
