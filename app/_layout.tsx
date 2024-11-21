@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { DrawerContentComponentProps } from '@react-navigation/drawer';
 import Minigame from './minigame';
+import { showHighScores } from '@/storage';
 import Index from './index';
 import HeaderIcons from '../components/HeaderIcons';
 
@@ -26,6 +27,7 @@ const CustomDrawerContent = (props: DrawerContentComponentProps) => (
 
 const RootLayout = () => {
   const [searchBarVisible, setSearchBarVisible] = useState<boolean>(false);
+  const [correctGuessCount, setCorrectGuessCount] = useState<number>(0);
 
   return (
     <>
@@ -83,11 +85,19 @@ const RootLayout = () => {
           </Drawer.Screen>
           <Drawer.Screen
             name="Minigame"
-            component={Minigame}
             options={{
-              headerRight: () => <HeaderIcons icons={[{ name: 'leaderboard', onPress: () => alert('hello') }]} />,
+              headerRight: () => (
+                <HeaderIcons
+                  icons={[{ name: 'leaderboard', onPress: () => showHighScores() }]}
+                  count={correctGuessCount}
+                />
+              ),
             }}
-          />
+          >
+            {(props) => (
+              <Minigame {...props} correctGuessCount={correctGuessCount} setCorrectGuessCount={setCorrectGuessCount} />
+            )}
+          </Drawer.Screen>
         </Drawer.Navigator>
       </QueryClientProvider>
     </>

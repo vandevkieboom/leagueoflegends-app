@@ -27,7 +27,12 @@ const Index = ({ searchBarVisible }: IndexProps) => {
   return (
     <View style={styles.container}>
       {searchBarVisible && (
-        <TextInput placeholder="Search champions" onChangeText={setSearch} style={styles.textInput} />
+        <TextInput
+          placeholder="Search Champion"
+          placeholderTextColor="gray"
+          onChangeText={setSearch}
+          style={styles.textInput}
+        />
       )}
       <FlatList
         data={filteredChampions}
@@ -67,11 +72,13 @@ const styles = StyleSheet.create({
     backgroundColor: 'black',
   },
   textInput: {
-    backgroundColor: 'white',
+    borderColor: 'gray',
+    borderWidth: 1,
     borderRadius: 2,
     marginBottom: 12,
     marginHorizontal: 5,
-    padding: 10,
+    padding: 7,
+    color: 'white',
   },
   item: {
     flex: 1,

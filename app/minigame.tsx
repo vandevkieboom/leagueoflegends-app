@@ -1,24 +1,91 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { fetchChampions } from '@/api';
 import { Champion } from '@/types';
-import { useQuery } from '@tanstack/react-query';
-import { FlatList, View, StyleSheet, Pressable, Image, TextInput, Button, Text } from 'react-native';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { FlatList, View, StyleSheet, Pressable, Image, TextInput, Button, Text, ActivityIndicator } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
+import { getHighScore, saveHighScore } from '@/storage';
 
-const Minigame = () => {
-  const [guess, setGuess] = useState('');
+interface MinigameProps {
+  correctGuessCount: number;
+  setCorrectGuessCount: React.Dispatch<React.SetStateAction<number>>;
+}
+
+const Minigame = ({ correctGuessCount, setCorrectGuessCount }: MinigameProps) => {
+  const [guess, setGuess] = useState<string>('');
   const [correctGuesses, setCorrectGuesses] = useState<string[]>([]);
+  const [inputBorderColor, setInputBorderColor] = useState<string>('gray');
 
-  const { data: champions } = useQuery<Champion[]>({
+  const queryClient = useQueryClient();
+
+  const {
+    data: champions,
+    error: championsError,
+    isLoading: isLoadingChampions,
+  } = useQuery<Champion[]>({
     queryKey: ['champions'],
     queryFn: fetchChampions,
   });
 
+  const { data: highestScore = 0, error: highScoreError } = useQuery<number>({
+    queryKey: ['highScore'],
+    queryFn: getHighScore,
+  });
+
+  const mutation = useMutation<void, Error, number>({
+    mutationFn: saveHighScore,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['highScore'] });
+    },
+  });
+
+  useEffect(() => {
+    if (correctGuessCount > highestScore) {
+      mutation.mutate(correctGuessCount);
+    }
+  }, [correctGuessCount]);
+
   const handleGuess = () => {
-    if (champions && champions.some((champion) => champion.name.toLowerCase() === guess.toLowerCase())) {
-      setCorrectGuesses([...correctGuesses, guess]);
+    const lowercasedGuess = guess.toLowerCase();
+    if (champions && champions.some((champion) => champion.name.toLowerCase() === lowercasedGuess)) {
+      if (!correctGuesses.map((g) => g.toLowerCase()).includes(lowercasedGuess)) {
+        setCorrectGuesses([...correctGuesses, lowercasedGuess]);
+        setCorrectGuessCount(correctGuessCount + 1);
+        setInputBorderColor('green');
+      } else {
+        setInputBorderColor('orange');
+      }
+    } else {
+      setInputBorderColor('red');
     }
     setGuess('');
+
+    setTimeout(() => {
+      setInputBorderColor('gray');
+    }, 1000);
   };
+
+  const handleReset = () => {
+    setCorrectGuesses([]);
+    setCorrectGuessCount(0);
+  };
+
+  if (isLoadingChampions) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#00ff00" />
+        <Text style={styles.loadingText}>Gegevens laden...</Text>
+      </View>
+    );
+  }
+
+  if (championsError || highScoreError) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>Er is een fout opgetreden bij het laden van de gegevens.</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -28,23 +95,31 @@ const Minigame = () => {
         keyExtractor={(item) => item.id.toString()}
         numColumns={5}
         renderItem={({ item }) => (
-          <Pressable style={styles.item} onPress={() => alert(item.name)}>
+          <View style={styles.item}>
             <Image source={{ uri: item.image.loading }} style={styles.image} />
-            {correctGuesses.includes(item.name) && (
+            {correctGuesses.map((g) => g.toLowerCase()).includes(item.name.toLowerCase()) && (
               <View style={styles.overlay}>
-                <View style={styles.nameContainer}>
-                  <Text style={styles.guessText} numberOfLines={1} ellipsizeMode="tail">
-                    {item.name}
-                  </Text>
-                </View>
+                <MaterialIcons name="check" size={34} color="#fff" />
               </View>
             )}
-          </Pressable>
+          </View>
         )}
       />
       <View style={styles.inputContainer}>
-        <TextInput style={styles.input} value={guess} onChangeText={setGuess} placeholder="Enter champion name" />
-        <Button title="Guess" onPress={handleGuess} />
+        <TextInput
+          style={[styles.input, { borderColor: inputBorderColor }]}
+          value={guess}
+          onChangeText={setGuess}
+          placeholder="Guess Champion"
+          placeholderTextColor="gray"
+          onSubmitEditing={handleGuess}
+        />
+        <Pressable onPress={handleGuess} style={styles.checkIcon}>
+          <MaterialIcons name="check" size={34} color="green" />
+        </Pressable>
+        <Pressable onPress={handleReset}>
+          <MaterialIcons name="restart-alt" size={34} color="red" />
+        </Pressable>
       </View>
     </View>
   );
@@ -55,6 +130,27 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 10,
     backgroundColor: 'black',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'black',
+  },
+  loadingText: {
+    color: 'white',
+    fontSize: 18,
+    marginTop: 10,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'black',
+  },
+  errorText: {
+    color: 'red',
+    fontSize: 18,
   },
   item: {
     flex: 1,
@@ -69,32 +165,32 @@ const styles = StyleSheet.create({
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(68, 178, 69, 0.4)',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  nameContainer: {
-    width: '100%',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    padding: 4,
-  },
-  guessText: {
-    color: '#fff',
-    textAlign: 'center',
-    textTransform: 'uppercase',
-    fontSize: 12,
   },
   inputContainer: {
     flexDirection: 'row',
     padding: 10,
+    alignItems: 'center',
   },
   input: {
     flex: 1,
     borderColor: 'gray',
     borderWidth: 1,
-    marginRight: 10,
-    padding: 5,
+    marginRight: 20,
+    padding: 7,
+    borderRadius: 2,
+    color: 'gray',
+  },
+  countText: {
     color: 'white',
+    fontSize: 17,
+    textAlign: 'center',
+    paddingBottom: 10,
+  },
+  checkIcon: {
+    marginRight: 20,
   },
 });
 
