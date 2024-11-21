@@ -1,25 +1,24 @@
 import React from 'react';
-import { View, StyleSheet, Text, Pressable } from 'react-native';
+import { View, StyleSheet, Pressable } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { ParamListBase, useNavigation } from '@react-navigation/native';
-import { DrawerNavigationProp } from '@react-navigation/drawer';
 
-const HeaderIcons = () => {
-  const navigation = useNavigation<DrawerNavigationProp<ParamListBase>>();
+interface HeaderIcon {
+  name: 'search' | 'filter-list' | 'sort' | 'leaderboard';
+  onPress: () => void;
+}
 
+interface HeaderIconsProps {
+  icons: HeaderIcon[];
+}
+
+const HeaderIcons = ({ icons }: HeaderIconsProps) => {
   return (
     <View style={styles.headerIcons}>
-      <Pressable onPress={() => alert('Search')}>
-        <MaterialIcons name="search" size={24} color="white" style={styles.headerIcon} />
-      </Pressable>
-
-      <Pressable onPress={() => alert('Filter')}>
-        <MaterialIcons name="filter-list" size={24} color="white" style={styles.headerIcon} />
-      </Pressable>
-
-      <Pressable onPress={() => alert('Sort')}>
-        <MaterialIcons name="sort" size={24} color="white" style={styles.headerIcon} />
-      </Pressable>
+      {icons.map((icon, index) => (
+        <Pressable key={index} onPress={icon.onPress}>
+          <MaterialIcons name={icon.name} size={24} color="white" style={styles.headerIcon} />
+        </Pressable>
+      ))}
     </View>
   );
 };

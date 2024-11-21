@@ -1,17 +1,16 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { createDrawerNavigator, DrawerContentScrollView, DrawerItemList } from '@react-navigation/drawer';
 import { View, Pressable, StatusBar, Image, StyleSheet } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { LinearGradient } from 'expo-linear-gradient';
+import { DrawerContentComponentProps } from '@react-navigation/drawer';
 import Minigame from './minigame';
 import Index from './index';
 import HeaderIcons from '../components/HeaderIcons';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { LinearGradient } from 'expo-linear-gradient';
 
 const Drawer = createDrawerNavigator();
 const queryClient = new QueryClient();
-
-import { DrawerContentComponentProps } from '@react-navigation/drawer';
 
 const CustomDrawerContent = (props: DrawerContentComponentProps) => (
   <View style={{ flex: 1 }}>
@@ -26,6 +25,8 @@ const CustomDrawerContent = (props: DrawerContentComponentProps) => (
 );
 
 const RootLayout = () => {
+  const [searchBarVisible, setSearchBarVisible] = useState<boolean>(false);
+
   return (
     <>
       <StatusBar barStyle="light-content" backgroundColor="black" />
@@ -34,7 +35,6 @@ const RootLayout = () => {
           initialRouteName="Champions"
           drawerContent={CustomDrawerContent}
           screenOptions={({ navigation }) => ({
-            headerRight: () => <HeaderIcons />,
             headerLeft: () => (
               <View style={{ alignItems: 'center' }}>
                 <Pressable onPress={() => navigation.openDrawer()}>
@@ -65,8 +65,29 @@ const RootLayout = () => {
             },
           })}
         >
-          <Drawer.Screen name="Champions" component={Index} />
-          <Drawer.Screen name="Minigame" component={Minigame} />
+          <Drawer.Screen
+            name="Champions"
+            options={{
+              headerRight: () => (
+                <HeaderIcons
+                  icons={[
+                    { name: 'search', onPress: () => setSearchBarVisible((prev) => !prev) },
+                    { name: 'filter-list', onPress: () => alert('hello') },
+                    { name: 'sort', onPress: () => alert('hello') },
+                  ]}
+                />
+              ),
+            }}
+          >
+            {(props) => <Index {...props} searchBarVisible={searchBarVisible} />}
+          </Drawer.Screen>
+          <Drawer.Screen
+            name="Minigame"
+            component={Minigame}
+            options={{
+              headerRight: () => <HeaderIcons icons={[{ name: 'leaderboard', onPress: () => alert('hello') }]} />,
+            }}
+          />
         </Drawer.Navigator>
       </QueryClientProvider>
     </>
