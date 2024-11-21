@@ -46,7 +46,9 @@ const Index = ({ searchBarVisible }: IndexProps) => {
               />
             </TouchableOpacity>
             <View style={styles.nameContainer}>
-              <Text style={styles.nameText}>{item.name}</Text>
+              <Text style={styles.nameText} numberOfLines={1} ellipsizeMode="tail">
+                {item.name}
+              </Text>
               <Text style={styles.description} numberOfLines={1} ellipsizeMode="tail">
                 {item.title}
               </Text>
