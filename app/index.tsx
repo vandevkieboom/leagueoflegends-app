@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { fetchChampions } from '@/api';
 import { Champion, Tag } from '@/types';
 import OptionsModal from '@/components/OptionsModal';
+import { getBookmarkedChampions, saveBookmarkedChampions } from '@/storage';
 
 interface IndexProps {
   searchBarVisible: boolean;
@@ -37,6 +38,14 @@ const Index = ({
   });
 
   useEffect(() => {
+    const loadBookmarkedChampions = async () => {
+      const storedBookmarked = await getBookmarkedChampions();
+      setBookmarked(storedBookmarked);
+    };
+    loadBookmarkedChampions();
+  }, []);
+
+  useEffect(() => {
     if (champions) {
       let updatedChampions = [...champions];
       if (search) {
@@ -53,13 +62,21 @@ const Index = ({
         updatedChampions.sort((a, b) => a.name.localeCompare(b.name));
       } else if (sortOption === 'difficulty') {
         updatedChampions.sort((a, b) => a.info.difficulty - b.info.difficulty);
+      } else if (sortOption === 'favorites') {
+        updatedChampions.sort((a, b) => {
+          const aBookmarked = bookmarked[a.id] ? 1 : 0;
+          const bBookmarked = bookmarked[b.id] ? 1 : 0;
+          return bBookmarked - aBookmarked;
+        });
       }
       setFilteredChampions(updatedChampions);
     }
-  }, [champions, search, sortOption, filterOption]);
+  }, [champions, search, sortOption, filterOption, bookmarked]);
 
-  const toggleBookmark = (id: string) => {
-    setBookmarked((prev) => ({ ...prev, [id]: !prev[id] }));
+  const toggleBookmark = async (id: string) => {
+    const updatedBookmarked = { ...bookmarked, [id]: !bookmarked[id] };
+    setBookmarked(updatedBookmarked);
+    await saveBookmarkedChampions(updatedBookmarked);
   };
 
   const handleSort = (option: string) => {
@@ -139,7 +156,7 @@ const Index = ({
         onClose={() => setSortModalVisible(false)}
         onSelect={handleSort}
         selectedOption={sortOption}
-        options={['name', 'difficulty']}
+        options={['name', 'difficulty', 'favorites']}
         title="Sort Champions"
       />
 

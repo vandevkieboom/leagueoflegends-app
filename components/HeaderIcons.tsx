@@ -1,38 +1,52 @@
 import React from 'react';
 import { View, StyleSheet, Pressable, Text } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
+import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import { fetchChampions } from '@/api';
 import { Champion } from '@/types';
 import { useQuery } from '@tanstack/react-query';
 
 interface HeaderIcon {
-  name: 'search' | 'filter-list' | 'sort' | 'leaderboard';
+  name: 'search' | 'filter-list' | 'sort' | 'leaderboard' | 'heart';
   onPress: () => void;
 }
 
 interface HeaderIconsProps {
-  icons: HeaderIcon[];
+  icons?: HeaderIcon[];
   count?: number;
+  lives?: number;
 }
 
-const HeaderIcons = ({ icons, count }: HeaderIconsProps) => {
+const HeaderIcons = ({ icons = [], count, lives }: HeaderIconsProps) => {
   const { data: champions } = useQuery<Champion[]>({
     queryKey: ['champions'],
     queryFn: fetchChampions,
   });
 
+  const renderLifeIcons = () => {
+    const lifeIcons = [];
+    for (let i = 0; i < (lives || 0); i++) {
+      lifeIcons.push(<MaterialCommunityIcons key={i} name="heart" size={24} color="white" style={styles.lifeIcon} />);
+    }
+    return lifeIcons;
+  };
+
   return (
     <View style={styles.headerIcons}>
       {icons.map((icon, index) => (
         <Pressable key={index} onPress={icon.onPress} style={styles.iconContainer}>
-          {icon.name === 'leaderboard' && count !== undefined && (
+          {icon.name === 'heart' && count !== undefined && (
             <Text style={styles.countText}>
               {count}/{champions?.length}
             </Text>
           )}
-          <MaterialIcons name={icon.name} size={24} color="white" style={styles.headerIcon} />
+          {icon.name === 'heart' ? (
+            <MaterialCommunityIcons name={icon.name} size={24} color="white" style={styles.headerIcon} />
+          ) : (
+            <MaterialIcons name={icon.name} size={24} color="white" style={styles.headerIcon} />
+          )}
         </Pressable>
       ))}
+      {renderLifeIcons()}
     </View>
   );
 };
@@ -56,6 +70,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginRight: -3,
     marginTop: 4,
+  },
+  lifeIcon: {
+    marginHorizontal: 2,
   },
 });
 

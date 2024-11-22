@@ -1,30 +1,22 @@
 import React, { useEffect, useState } from 'react';
-import { fetchChampions } from '@/api';
+import { fetchChampions, postHighScore } from '@/api';
 import { Champion } from '@/types';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { FlatList, View, StyleSheet, Pressable, Image, TextInput, Text, ActivityIndicator, Modal } from 'react-native';
+import { useQuery } from '@tanstack/react-query';
+import { FlatList, View, StyleSheet, Pressable, Image, TextInput, Text, ActivityIndicator } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { getHighScore, saveHighScore } from '@/storage';
-import { getRank, getRankColor } from '../rankUtils';
+import { getCorrectGuesses, saveCorrectGuesses, getLives, saveLives } from '@/storage';
 
 interface MinigameProps {
   correctGuessCount: number;
   setCorrectGuessCount: React.Dispatch<React.SetStateAction<number>>;
-  highscoresModalVisible: boolean;
-  setHighscoresModalVisible: React.Dispatch<React.SetStateAction<boolean>>;
+  lives: number;
+  setLives: React.Dispatch<React.SetStateAction<number>>;
 }
 
-const Minigame = ({
-  correctGuessCount,
-  setCorrectGuessCount,
-  highscoresModalVisible,
-  setHighscoresModalVisible,
-}: MinigameProps) => {
+const Minigame = ({ correctGuessCount, setCorrectGuessCount, lives, setLives }: MinigameProps) => {
   const [guess, setGuess] = useState<string>('');
   const [correctGuesses, setCorrectGuesses] = useState<string[]>([]);
   const [inputBorderColor, setInputBorderColor] = useState<string>('gray');
-
-  const queryClient = useQueryClient();
 
   const {
     data: champions,
@@ -35,36 +27,42 @@ const Minigame = ({
     queryFn: fetchChampions,
   });
 
-  const { data: highScore = 0, error: highScoreError } = useQuery<number>({
-    queryKey: ['highScore'],
-    queryFn: getHighScore,
-  });
+  const handleGameOver = async () => {
+    const username = 'player1';
+    const score = correctGuessCount;
 
-  const mutation = useMutation<void, Error, number>({
-    mutationFn: saveHighScore,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['highScore'] });
-    },
-  });
-
-  useEffect(() => {
-    if (correctGuessCount > highScore) {
-      mutation.mutate(correctGuessCount);
+    try {
+      await postHighScore(username, score);
+      alert('Game over! Your high score has been posted.');
+    } catch (error) {
+      alert('Failed to post high score.');
     }
-  }, [correctGuessCount]);
+  };
 
   const handleGuess = () => {
     const lowercasedGuess = guess.toLowerCase();
     if (champions && champions.some((champion) => champion.name.toLowerCase() === lowercasedGuess)) {
       if (!correctGuesses.map((g) => g.toLowerCase()).includes(lowercasedGuess)) {
-        setCorrectGuesses([...correctGuesses, lowercasedGuess]);
-        setCorrectGuessCount(correctGuessCount + 1);
+        setCorrectGuesses((prevGuesses) => {
+          const newGuesses = [...prevGuesses, lowercasedGuess];
+          setCorrectGuessCount(newGuesses.length);
+          return newGuesses;
+        });
         setInputBorderColor('green');
       } else {
         setInputBorderColor('orange');
       }
     } else {
       setInputBorderColor('red');
+      setLives((prevLives) => {
+        const newLives = prevLives - 1;
+        if (newLives <= 0) {
+          handleGameOver();
+          handleReset();
+          return 3;
+        }
+        return newLives;
+      });
     }
     setGuess('');
 
@@ -73,9 +71,31 @@ const Minigame = ({
     }, 1000);
   };
 
+  useEffect(() => {
+    const loadGameData = async () => {
+      const storedGuesses = await getCorrectGuesses();
+      setCorrectGuesses(storedGuesses);
+      setCorrectGuessCount(storedGuesses.length);
+      const storedLives = await getLives();
+      setLives(storedLives);
+    };
+    loadGameData();
+  }, []);
+
+  useEffect(() => {
+    saveCorrectGuesses(correctGuesses);
+  }, [correctGuesses]);
+
+  useEffect(() => {
+    saveLives(lives);
+  }, [lives]);
+
   const handleReset = () => {
     setCorrectGuesses([]);
     setCorrectGuessCount(0);
+    saveCorrectGuesses([]);
+    setLives(3);
+    saveLives(3);
   };
 
   if (isLoadingChampions) {
@@ -87,7 +107,7 @@ const Minigame = ({
     );
   }
 
-  if (championsError || highScoreError) {
+  if (championsError) {
     return (
       <View style={styles.errorContainer}>
         <Text style={styles.errorText}>An error occurred while loading the data.</Text>
@@ -129,27 +149,26 @@ const Minigame = ({
           <MaterialIcons name="restart-alt" size={34} color="red" />
         </Pressable>
       </View>
-
-      <Modal
+      {/* <Modal
         animationType="slide"
         transparent={true}
         visible={highscoresModalVisible}
         onRequestClose={() => setHighscoresModalVisible(false)}
       >
         <Pressable style={styles.modalContainer} onPress={() => setHighscoresModalVisible(false)}>
-          <View style={[styles.modalContent, { borderColor: getRankColor(getRank(highScore)) }]}>
-            <Text style={[styles.modalTitle, { color: getRankColor(getRank(highScore)) }]}>
-              RANKING: {getRank(highScore).toUpperCase()}
+          <View style={[styles.modalContent, { borderColor: getRankColor(getRank(1)) }]}>
+            <Text style={[styles.modalTitle, { color: getRankColor(getRank(1)) }]}>
+              RANKING: {getRank(1).toUpperCase()}
             </Text>
             <View style={styles.highScoreContainer}>
-              <Text style={[styles.highScoreText, { color: getRankColor(getRank(highScore)) }]}>
-                {highScore}/{champions?.length}
+              <Text style={[styles.highScoreText, { color: getRankColor(getRank(1)) }]}>
+                {1}/{champions?.length}
               </Text>
               <Text style={styles.modalText}>Champions</Text>
             </View>
           </View>
         </Pressable>
-      </Modal>
+      </Modal> */}
     </View>
   );
 };

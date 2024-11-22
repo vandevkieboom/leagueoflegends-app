@@ -1,35 +1,54 @@
 import React, { useState, useEffect } from 'react';
 import { createDrawerNavigator, DrawerContentScrollView, DrawerItemList } from '@react-navigation/drawer';
-import { View, Pressable, StatusBar, Image, StyleSheet, Text } from 'react-native';
-import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
+import { View, Pressable, StatusBar, Image, StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { Ionicons, MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { DrawerContentComponentProps } from '@react-navigation/drawer';
+import { Audio } from 'expo-av';
 import Minigame from './minigame';
 import Index from './index';
 import HeaderIcons from '../components/HeaderIcons';
+import Leaderboard from './leaderboard';
 
 const Drawer = createDrawerNavigator();
 const queryClient = new QueryClient();
 
-const CustomDrawerContent = (props: DrawerContentComponentProps) => (
-  <View style={{ flex: 1 }}>
-    <View style={{ position: 'relative', borderTopRightRadius: 0, overflow: 'hidden' }}>
-      <Image source={require('../assets/images/viego.jpg')} style={styles.drawerImage} />
-      <LinearGradient colors={['transparent', 'rgba(16, 16, 16, 1)']} style={styles.imageOverlay} />
+const images = [
+  require('../assets/images/ryze1.webp'),
+  require('../assets/images/ryze2.webp'),
+  require('../assets/images/ryze3.webp'),
+  require('../assets/images/ryze4.webp'),
+];
+
+const CustomDrawerContent = (props: DrawerContentComponentProps) => {
+  const playSound = async () => {
+    const { sound } = await Audio.Sound.createAsync(require('../assets/audio/ryze.mp3'));
+    await sound.playAsync();
+  };
+
+  return (
+    <View style={{ flex: 1 }}>
+      <View style={{ position: 'relative', borderTopRightRadius: 0, overflow: 'hidden' }}>
+        <Image source={require('../assets/images/ryze3.webp')} style={styles.drawerImage} />
+        <LinearGradient colors={['transparent', 'rgba(16, 16, 16, 1)']} style={styles.imageOverlay} />
+        <TouchableOpacity onPress={playSound} style={styles.audioIcon}>
+          <Ionicons name="volume-medium" size={20} color="white" />
+        </TouchableOpacity>
+      </View>
+      <DrawerContentScrollView {...props}>
+        <DrawerItemList {...props} />
+      </DrawerContentScrollView>
     </View>
-    <DrawerContentScrollView {...props}>
-      <DrawerItemList {...props} />
-    </DrawerContentScrollView>
-  </View>
-);
+  );
+};
 
 const RootLayout = () => {
   const [searchBarVisible, setSearchBarVisible] = useState<boolean>(false);
-  const [correctGuessCount, setCorrectGuessCount] = useState<number>(0);
-  const [highscoresModalVisible, setHighscoresModalVisible] = useState<boolean>(false);
   const [sortModalVisible, setSortModalVisible] = useState<boolean>(false);
   const [filterModalVisible, setFilterModalVisible] = useState<boolean>(false);
+  const [correctGuessCount, setCorrectGuessCount] = useState<number>(0);
+  const [lives, setLives] = useState<number>(3);
 
   return (
     <>
@@ -102,12 +121,7 @@ const RootLayout = () => {
             name="Minigame"
             options={{
               drawerIcon: () => <MaterialIcons name="quiz" size={20} color="white" />,
-              headerRight: () => (
-                <HeaderIcons
-                  icons={[{ name: 'leaderboard', onPress: () => setHighscoresModalVisible(true) }]}
-                  count={correctGuessCount}
-                />
-              ),
+              headerRight: () => <HeaderIcons count={correctGuessCount} lives={lives} />,
             }}
           >
             {(props) => (
@@ -115,11 +129,18 @@ const RootLayout = () => {
                 {...props}
                 correctGuessCount={correctGuessCount}
                 setCorrectGuessCount={setCorrectGuessCount}
-                highscoresModalVisible={highscoresModalVisible}
-                setHighscoresModalVisible={setHighscoresModalVisible}
+                lives={lives}
+                setLives={setLives}
               />
             )}
           </Drawer.Screen>
+          <Drawer.Screen
+            name="Leaderboard"
+            options={{
+              drawerIcon: () => <MaterialIcons name="leaderboard" size={20} color="white" />,
+            }}
+            component={Leaderboard}
+          ></Drawer.Screen>
         </Drawer.Navigator>
       </QueryClientProvider>
     </>
@@ -129,7 +150,7 @@ const RootLayout = () => {
 const styles = StyleSheet.create({
   drawerImage: {
     width: '100%',
-    height: 210,
+    height: 220,
     resizeMode: 'cover',
   },
   imageOverlay: {
@@ -138,6 +159,11 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 140,
+  },
+  audioIcon: {
+    position: 'absolute',
+    bottom: 10,
+    right: 10,
   },
 });
 
