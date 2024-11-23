@@ -128,7 +128,7 @@ const Index = ({
           keyExtractor={(item) => item.id.toString()}
           numColumns={3}
           renderItem={({ item }) => (
-            <TouchableOpacity style={styles.item} onPress={() => alert(item.name)} activeOpacity={0.5}>
+            <TouchableOpacity style={styles.item} activeOpacity={0.5}>
               <View />
               <Image source={{ uri: item.image.loading }} style={styles.image} />
               <TouchableOpacity style={styles.bookmarkIcon} onPress={() => toggleBookmark(item.id.toString())}>

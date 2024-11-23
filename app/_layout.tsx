@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { createDrawerNavigator, DrawerContentScrollView, DrawerItemList } from '@react-navigation/drawer';
-import { View, Pressable, StatusBar, Image, StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { View, Pressable, StatusBar, Image, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons, MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -10,7 +10,6 @@ import Minigame from './minigame';
 import Index from './index';
 import HeaderIcons from '../components/HeaderIcons';
 import Leaderboard from './leaderboard';
-import { getLives } from '@/storage';
 
 const Drawer = createDrawerNavigator();
 const queryClient = new QueryClient();

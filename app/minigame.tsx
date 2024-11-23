@@ -5,7 +5,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { FlatList, View, StyleSheet, Pressable, Image, TextInput, Text, ActivityIndicator, Modal } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { getCorrectGuesses, saveCorrectGuesses, getLives, saveLives, saveScore, getScore } from '@/storage';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface MinigameProps {
   lives: number | null;
@@ -42,20 +41,6 @@ const Minigame = ({ lives, setLives }: MinigameProps) => {
       console.error('Error posting high score:', error);
     },
   });
-
-  const viewStoredData = async (key: string) => {
-    try {
-      const data = await AsyncStorage.getItem(key);
-      console.log(`Stored Data for ${key}:`, data);
-    } catch (error) {
-      console.error(`Error retrieving data for ${key} from AsyncStorage`, error);
-    }
-  };
-
-  useEffect(() => {
-    viewStoredData('lives');
-    viewStoredData('score');
-  }, [lives, score]);
 
   const handleGuess = () => {
     const lowercasedGuess = guess.toLowerCase();

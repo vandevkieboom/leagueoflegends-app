@@ -40,12 +40,12 @@ const Leaderboard = () => {
     <View style={styles.container}>
       <View style={styles.leaderboard}>
         <View style={styles.tableHeader}>
-          <Text style={styles.tableHeaderText}>Name</Text>
-          <Text style={styles.tableHeaderText}>Score</Text>
+          <Text style={styles.tableHeaderText}>NAME</Text>
+          <Text style={styles.tableHeaderText}>SCORE</Text>
         </View>
         <ScrollView>
           {sortedHighScores?.map((item, index) => (
-            <View key={index.toString()} style={styles.tableRow}>
+            <View key={index.toString()} style={[styles.tableRow, index % 2 === 0 ? styles.evenRow : styles.oddRow]}>
               <Text style={styles.tableCell}>{item.name}</Text>
               <Text style={styles.tableCell}>
                 {item.score} / {champions?.length}
@@ -86,46 +86,42 @@ const styles = StyleSheet.create({
   },
   leaderboard: {
     flex: 1,
-    backgroundColor: 'rgba(15, 15, 15, 1)',
-    borderRadius: 10,
-    marginBottom: 30,
-  },
-  scoreItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    padding: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: 'gray',
-  },
-  username: {
-    color: 'white',
-    fontSize: 18,
-  },
-  score: {
-    color: 'white',
-    fontSize: 18,
+    borderRadius: 0,
+    marginBottom: 0,
   },
   tableHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     padding: 10,
-    backgroundColor: 'gray',
+    marginHorizontal: 7,
   },
   tableHeaderText: {
+    flex: 1,
     color: 'white',
-    fontSize: 18,
+    fontSize: 17,
+    textTransform: 'uppercase',
+    textAlign: 'center',
     fontWeight: 'bold',
   },
   tableRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     padding: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: 'gray',
+    marginVertical: 1,
+    marginHorizontal: 7,
+    borderRadius: 100,
+  },
+  evenRow: {
+    backgroundColor: 'rgba(34, 34, 34, 1)',
+  },
+  oddRow: {
+    backgroundColor: 'rgba(34, 34, 34, 0.7)',
   },
   tableCell: {
+    flex: 1,
     color: 'white',
-    fontSize: 18,
+    fontSize: 17,
+    textAlign: 'center',
   },
 });
 
