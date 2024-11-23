@@ -1,22 +1,23 @@
 import React, { useEffect, useState } from 'react';
 import { fetchChampions, postHighScore } from '@/api';
 import { Champion } from '@/types';
-import { useQuery } from '@tanstack/react-query';
-import { FlatList, View, StyleSheet, Pressable, Image, TextInput, Text, ActivityIndicator } from 'react-native';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { FlatList, View, StyleSheet, Pressable, Image, TextInput, Text, ActivityIndicator, Modal } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { getCorrectGuesses, saveCorrectGuesses, getLives, saveLives } from '@/storage';
 
 interface MinigameProps {
-  correctGuessCount: number;
-  setCorrectGuessCount: React.Dispatch<React.SetStateAction<number>>;
   lives: number;
   setLives: React.Dispatch<React.SetStateAction<number>>;
 }
 
-const Minigame = ({ correctGuessCount, setCorrectGuessCount, lives, setLives }: MinigameProps) => {
+const Minigame = ({ lives, setLives }: MinigameProps) => {
   const [guess, setGuess] = useState<string>('');
   const [correctGuesses, setCorrectGuesses] = useState<string[]>([]);
   const [inputBorderColor, setInputBorderColor] = useState<string>('gray');
+  const [playerName, setPlayerName] = useState<string>('');
+  const [isGameOver, setIsGameOver] = useState<boolean>(false);
+  const [score, setScore] = useState<number>(0);
 
   const {
     data: champions,
@@ -27,28 +28,16 @@ const Minigame = ({ correctGuessCount, setCorrectGuessCount, lives, setLives }: 
     queryFn: fetchChampions,
   });
 
-  const handleGameOver = async () => {
-    const username = 'player1';
-    const score = correctGuessCount;
-
-    try {
-      await postHighScore(username, score);
-      alert('Game over! Your high score has been posted.');
-    } catch (error) {
-      alert('Failed to post high score.');
-    }
-  };
-
   const handleGuess = () => {
     const lowercasedGuess = guess.toLowerCase();
     if (champions && champions.some((champion) => champion.name.toLowerCase() === lowercasedGuess)) {
       if (!correctGuesses.map((g) => g.toLowerCase()).includes(lowercasedGuess)) {
         setCorrectGuesses((prevGuesses) => {
           const newGuesses = [...prevGuesses, lowercasedGuess];
-          setCorrectGuessCount(newGuesses.length);
           return newGuesses;
         });
         setInputBorderColor('green');
+        setScore((prevScore) => prevScore + 1);
       } else {
         setInputBorderColor('orange');
       }
@@ -71,11 +60,31 @@ const Minigame = ({ correctGuessCount, setCorrectGuessCount, lives, setLives }: 
     }, 1000);
   };
 
+  const handleReset = () => {
+    setCorrectGuesses([]);
+    saveCorrectGuesses([]);
+    setLives(3);
+    saveLives(3);
+  };
+
+  const handleGameOver = () => {
+    setIsGameOver(true);
+  };
+
+  const handlePostHighScore = async () => {
+    try {
+      await postHighScore(playerName, score);
+      setIsGameOver(false);
+      handleReset();
+    } catch (error) {
+      console.error('Error posting high score:', error);
+    }
+  };
+
   useEffect(() => {
     const loadGameData = async () => {
       const storedGuesses = await getCorrectGuesses();
       setCorrectGuesses(storedGuesses);
-      setCorrectGuessCount(storedGuesses.length);
       const storedLives = await getLives();
       setLives(storedLives);
     };
@@ -90,19 +99,11 @@ const Minigame = ({ correctGuessCount, setCorrectGuessCount, lives, setLives }: 
     saveLives(lives);
   }, [lives]);
 
-  const handleReset = () => {
-    setCorrectGuesses([]);
-    setCorrectGuessCount(0);
-    saveCorrectGuesses([]);
-    setLives(3);
-    saveLives(3);
-  };
-
   if (isLoadingChampions) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="fff" />
-        <Text style={styles.loadingText}>Gegevens laden...</Text>
+        <Text style={styles.loadingText}>Loading data...</Text>
       </View>
     );
   }
@@ -127,7 +128,7 @@ const Minigame = ({ correctGuessCount, setCorrectGuessCount, lives, setLives }: 
             <Image source={{ uri: item.image.loading }} style={styles.image} />
             {correctGuesses.map((g) => g.toLowerCase()).includes(item.name.toLowerCase()) && (
               <View style={styles.overlay}>
-                <MaterialIcons name="check" size={34} color="#fff" />
+                <MaterialIcons name="check" size={34} color="white" />
               </View>
             )}
           </View>
@@ -149,26 +150,30 @@ const Minigame = ({ correctGuessCount, setCorrectGuessCount, lives, setLives }: 
           <MaterialIcons name="restart-alt" size={34} color="red" />
         </Pressable>
       </View>
-      {/* <Modal
-        animationType="slide"
-        transparent={true}
-        visible={highscoresModalVisible}
-        onRequestClose={() => setHighscoresModalVisible(false)}
-      >
-        <Pressable style={styles.modalContainer} onPress={() => setHighscoresModalVisible(false)}>
-          <View style={[styles.modalContent, { borderColor: getRankColor(getRank(1)) }]}>
-            <Text style={[styles.modalTitle, { color: getRankColor(getRank(1)) }]}>
-              RANKING: {getRank(1).toUpperCase()}
-            </Text>
-            <View style={styles.highScoreContainer}>
-              <Text style={[styles.highScoreText, { color: getRankColor(getRank(1)) }]}>
-                {1}/{champions?.length}
-              </Text>
-              <Text style={styles.modalText}>Champions</Text>
+
+      <Modal animationType="fade" transparent={true} visible={isGameOver}>
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Game Over!</Text>
+            <View style={styles.inputContainer}>
+              <TextInput
+                style={[styles.input]}
+                value={playerName}
+                onChangeText={(text) => {
+                  console.log('Setting player name:', text);
+                  setPlayerName(text);
+                }}
+                placeholder="Enter username"
+                placeholderTextColor="gray"
+                onSubmitEditing={handlePostHighScore}
+              />
+              <Pressable onPress={handlePostHighScore}>
+                <MaterialIcons name="save" size={34} color="white" />
+              </Pressable>
             </View>
           </View>
-        </Pressable>
-      </Modal> */}
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -249,8 +254,9 @@ const styles = StyleSheet.create({
   modalContent: {
     backgroundColor: '#000',
     opacity: 0.9,
-    padding: 40,
-    width: '77%',
+    paddingVertical: 20,
+    paddingHorizontal: 10,
+    width: '80%',
     borderRadius: 2,
     alignItems: 'center',
     borderWidth: 1,
@@ -258,6 +264,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     textAlign: 'center',
     marginBottom: 10,
+    color: 'white',
   },
   highScoreContainer: {
     flexDirection: 'row',

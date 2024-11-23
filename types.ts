@@ -23,3 +23,8 @@ export interface Info {
   magic: number;
   difficulty: number;
 }
+
+export interface HighScore {
+  name: string;
+  score: number;
+}

@@ -1,44 +1,35 @@
-import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, StyleSheet } from 'react-native';
-import { fetchHighScores } from '@/api';
-
-interface HighScore {
-  username: string;
-  score: number;
-}
+import { fetchChampions, fetchHighScores } from '@/api';
+import { useQuery } from '@tanstack/react-query';
+import { Champion, HighScore } from '@/types';
 
 const Leaderboard = () => {
-  const [highScores, setHighScores] = useState<HighScore[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data: champions } = useQuery<Champion[]>({
+    queryKey: ['champions'],
+    queryFn: fetchChampions,
+  });
 
-  useEffect(() => {
-    const loadHighScores = async () => {
-      try {
-        const scores = await fetchHighScores();
-        setHighScores(scores);
-      } catch (error) {
-        setError('Failed to load high scores.');
-      } finally {
-        setLoading(false);
-      }
-    };
+  const {
+    data: highScores,
+    isLoading: highScoresLoading,
+    error: highScoresError,
+  } = useQuery<HighScore[]>({
+    queryKey: ['highScores'],
+    queryFn: fetchHighScores,
+  });
 
-    loadHighScores();
-  }, []);
-
-  if (loading) {
+  if (highScoresLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>Loading high scores...</Text>
+        <Text style={styles.loadingText}>Loading data...</Text>
       </View>
     );
   }
 
-  if (error) {
+  if (highScoresError) {
     return (
       <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>{error}</Text>
+        <Text style={styles.errorText}>An error occurred while loading the data.</Text>
       </View>
     );
   }
@@ -51,8 +42,10 @@ const Leaderboard = () => {
         keyExtractor={(item, index) => index.toString()}
         renderItem={({ item }) => (
           <View style={styles.scoreItem}>
-            <Text style={styles.username}>{item.username}</Text>
-            <Text style={styles.score}>{item.score}</Text>
+            <Text style={styles.username}>{item.name}</Text>
+            <Text style={styles.score}>
+              {item.score} / {champions?.length}
+            </Text>
           </View>
         )}
       />

@@ -97,7 +97,7 @@ const Index = ({
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="fff" />
-        <Text style={styles.loadingText}>Gegevens laden...</Text>
+        <Text style={styles.loadingText}>Loading data...</Text>
       </View>
     );
   }

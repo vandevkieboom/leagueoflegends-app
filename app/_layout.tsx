@@ -14,13 +14,6 @@ import Leaderboard from './leaderboard';
 const Drawer = createDrawerNavigator();
 const queryClient = new QueryClient();
 
-const images = [
-  require('../assets/images/ryze1.webp'),
-  require('../assets/images/ryze2.webp'),
-  require('../assets/images/ryze3.webp'),
-  require('../assets/images/ryze4.webp'),
-];
-
 const CustomDrawerContent = (props: DrawerContentComponentProps) => {
   const playSound = async () => {
     const { sound } = await Audio.Sound.createAsync(require('../assets/audio/ryze.mp3'));
@@ -47,7 +40,6 @@ const RootLayout = () => {
   const [searchBarVisible, setSearchBarVisible] = useState<boolean>(false);
   const [sortModalVisible, setSortModalVisible] = useState<boolean>(false);
   const [filterModalVisible, setFilterModalVisible] = useState<boolean>(false);
-  const [correctGuessCount, setCorrectGuessCount] = useState<number>(0);
   const [lives, setLives] = useState<number>(3);
 
   return (
@@ -121,18 +113,10 @@ const RootLayout = () => {
             name="Minigame"
             options={{
               drawerIcon: () => <MaterialIcons name="quiz" size={20} color="white" />,
-              headerRight: () => <HeaderIcons count={correctGuessCount} lives={lives} />,
+              headerRight: () => <HeaderIcons lives={lives} />,
             }}
           >
-            {(props) => (
-              <Minigame
-                {...props}
-                correctGuessCount={correctGuessCount}
-                setCorrectGuessCount={setCorrectGuessCount}
-                lives={lives}
-                setLives={setLives}
-              />
-            )}
+            {(props) => <Minigame {...props} lives={lives} setLives={setLives} />}
           </Drawer.Screen>
           <Drawer.Screen
             name="Leaderboard"

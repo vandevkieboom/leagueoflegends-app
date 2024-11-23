@@ -1,14 +1,19 @@
-import { Champion } from '@/types';
-import { API_BASE_URL, BEARER_TOKEN } from '@env';
+import { Champion, HighScore } from '@/types';
 import axios from 'axios';
+
+const fetchToken = async () => {
+  try {
+    const response = await axios.get('https://sampleapis.assimilate.be/token?email=s151632@ap.be');
+    return response.data.token;
+  } catch (error) {
+    console.error('Failed to fetch token.', error);
+    throw error;
+  }
+};
 
 export const fetchChampions = async () => {
   try {
-    const response = await axios.get<Champion[]>(`${API_BASE_URL}/champions/`, {
-      headers: {
-        Authorization: `Bearer ${BEARER_TOKEN}`,
-      },
-    });
+    const response = await axios.get<Champion[]>(`https://sampleapis.assimilate.be/lol/champions`);
     return response.data.slice(0, -3);
   } catch (error) {
     console.error('Failed to fetch champions.', error);
@@ -16,14 +21,15 @@ export const fetchChampions = async () => {
   }
 };
 
-export const postHighScore = async (username: string, score: number) => {
+export const postHighScore = async (name: string, score: number) => {
   try {
-    const response = await axios.post(
-      `${API_BASE_URL}`,
-      { username, score },
+    const token = await fetchToken();
+    const response = await axios.post<HighScore[]>(
+      `https://sampleapis.assimilate.be/game/scores`,
+      { name, score },
       {
         headers: {
-          Authorization: `Bearer ${BEARER_TOKEN}`,
+          Authorization: `Bearer ${token}`,
         },
       }
     );
@@ -36,9 +42,11 @@ export const postHighScore = async (username: string, score: number) => {
 
 export const fetchHighScores = async () => {
   try {
-    const response = await axios.get(`${API_BASE_URL}`, {
+    const token = await fetchToken();
+    console.log('Token:', token);
+    const response = await axios.get<HighScore[]>(`https://sampleapis.assimilate.be/game/scores`, {
       headers: {
-        Authorization: `Bearer ${BEARER_TOKEN}`,
+        Authorization: `Bearer ${token}`,
       },
     });
     return response.data;
