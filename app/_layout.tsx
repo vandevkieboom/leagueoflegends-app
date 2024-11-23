@@ -10,6 +10,7 @@ import Minigame from './minigame';
 import Index from './index';
 import HeaderIcons from '../components/HeaderIcons';
 import Leaderboard from './leaderboard';
+import { getLives } from '@/storage';
 
 const Drawer = createDrawerNavigator();
 const queryClient = new QueryClient();
@@ -40,7 +41,15 @@ const RootLayout = () => {
   const [searchBarVisible, setSearchBarVisible] = useState<boolean>(false);
   const [sortModalVisible, setSortModalVisible] = useState<boolean>(false);
   const [filterModalVisible, setFilterModalVisible] = useState<boolean>(false);
-  const [lives, setLives] = useState<number>(3);
+  const [lives, setLives] = useState<number | null>(null);
+
+  // useEffect(() => {
+  //   const loadLivesData = async () => {
+  //     const storedLives = await getLives();
+  //     setLives(storedLives);
+  //   };
+  //   loadLivesData();
+  // }, []);
 
   return (
     <>

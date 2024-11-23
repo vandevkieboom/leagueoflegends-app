@@ -13,7 +13,7 @@ interface HeaderIcon {
 interface HeaderIconsProps {
   icons?: HeaderIcon[];
   count?: number;
-  lives?: number;
+  lives?: number | null;
 }
 
 const HeaderIcons = ({ icons = [], count, lives }: HeaderIconsProps) => {

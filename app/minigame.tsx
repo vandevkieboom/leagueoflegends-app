@@ -1,14 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { fetchChampions, postHighScore } from '@/api';
-import { Champion } from '@/types';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Champion, HighScore } from '@/types';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { FlatList, View, StyleSheet, Pressable, Image, TextInput, Text, ActivityIndicator, Modal } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { getCorrectGuesses, saveCorrectGuesses, getLives, saveLives } from '@/storage';
+import { getCorrectGuesses, saveCorrectGuesses, getLives, saveLives, saveScore, getScore } from '@/storage';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface MinigameProps {
-  lives: number;
-  setLives: React.Dispatch<React.SetStateAction<number>>;
+  lives: number | null;
+  setLives: React.Dispatch<React.SetStateAction<number | null>>;
 }
 
 const Minigame = ({ lives, setLives }: MinigameProps) => {
@@ -17,7 +18,9 @@ const Minigame = ({ lives, setLives }: MinigameProps) => {
   const [inputBorderColor, setInputBorderColor] = useState<string>('gray');
   const [playerName, setPlayerName] = useState<string>('');
   const [isGameOver, setIsGameOver] = useState<boolean>(false);
-  const [score, setScore] = useState<number>(0);
+  const [score, setScore] = useState<number | null>(null);
+
+  const queryClient = useQueryClient();
 
   const {
     data: champions,
@@ -28,6 +31,32 @@ const Minigame = ({ lives, setLives }: MinigameProps) => {
     queryFn: fetchChampions,
   });
 
+  const { mutate } = useMutation({
+    mutationFn: ({ name, score }: HighScore) => postHighScore({ name, score }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['highScores'] });
+      setIsGameOver(false);
+      handleReset();
+    },
+    onError: (error) => {
+      console.error('Error posting high score:', error);
+    },
+  });
+
+  const viewStoredData = async (key: string) => {
+    try {
+      const data = await AsyncStorage.getItem(key);
+      console.log(`Stored Data for ${key}:`, data);
+    } catch (error) {
+      console.error(`Error retrieving data for ${key} from AsyncStorage`, error);
+    }
+  };
+
+  useEffect(() => {
+    viewStoredData('lives');
+    viewStoredData('score');
+  }, [lives, score]);
+
   const handleGuess = () => {
     const lowercasedGuess = guess.toLowerCase();
     if (champions && champions.some((champion) => champion.name.toLowerCase() === lowercasedGuess)) {
@@ -37,17 +66,16 @@ const Minigame = ({ lives, setLives }: MinigameProps) => {
           return newGuesses;
         });
         setInputBorderColor('green');
-        setScore((prevScore) => prevScore + 1);
+        setScore((prevScore) => prevScore! + 1);
       } else {
         setInputBorderColor('orange');
       }
     } else {
       setInputBorderColor('red');
       setLives((prevLives) => {
-        const newLives = prevLives - 1;
+        const newLives = (prevLives ?? 1) - 1;
         if (newLives <= 0) {
           handleGameOver();
-          handleReset();
           return 3;
         }
         return newLives;
@@ -62,29 +90,24 @@ const Minigame = ({ lives, setLives }: MinigameProps) => {
 
   const handleReset = () => {
     setCorrectGuesses([]);
-    saveCorrectGuesses([]);
     setLives(3);
-    saveLives(3);
+    setScore(0);
   };
 
   const handleGameOver = () => {
     setIsGameOver(true);
   };
 
-  const handlePostHighScore = async () => {
-    try {
-      await postHighScore(playerName, score);
-      setIsGameOver(false);
-      handleReset();
-    } catch (error) {
-      console.error('Error posting high score:', error);
-    }
+  const handlePostHighScore = () => {
+    mutate({ name: playerName, score: score! });
   };
 
   useEffect(() => {
     const loadGameData = async () => {
       const storedGuesses = await getCorrectGuesses();
       setCorrectGuesses(storedGuesses);
+      const storedScore = await getScore();
+      setScore(storedScore);
       const storedLives = await getLives();
       setLives(storedLives);
     };
@@ -92,11 +115,19 @@ const Minigame = ({ lives, setLives }: MinigameProps) => {
   }, []);
 
   useEffect(() => {
+    if (score !== null) {
+      saveScore(score);
+    }
+  }, [score]);
+
+  useEffect(() => {
     saveCorrectGuesses(correctGuesses);
   }, [correctGuesses]);
 
   useEffect(() => {
-    saveLives(lives);
+    if (lives !== null) {
+      saveLives(lives);
+    }
   }, [lives]);
 
   if (isLoadingChampions) {
@@ -158,9 +189,7 @@ const Minigame = ({ lives, setLives }: MinigameProps) => {
             <View style={styles.inputContainer}>
               <TextInput
                 style={[styles.input]}
-                value={playerName}
                 onChangeText={(text) => {
-                  console.log('Setting player name:', text);
                   setPlayerName(text);
                 }}
                 placeholder="Enter username"

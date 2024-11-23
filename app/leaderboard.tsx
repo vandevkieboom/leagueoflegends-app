@@ -1,4 +1,4 @@
-import { View, Text, FlatList, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { fetchChampions, fetchHighScores } from '@/api';
 import { useQuery } from '@tanstack/react-query';
 import { Champion, HighScore } from '@/types';
@@ -18,6 +18,8 @@ const Leaderboard = () => {
     queryFn: fetchHighScores,
   });
 
+  const sortedHighScores = highScores?.sort((a, b) => b.score - a.score);
+
   if (highScoresLoading) {
     return (
       <View style={styles.loadingContainer}>
@@ -36,19 +38,22 @@ const Leaderboard = () => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Leaderboard</Text>
-      <FlatList
-        data={highScores}
-        keyExtractor={(item, index) => index.toString()}
-        renderItem={({ item }) => (
-          <View style={styles.scoreItem}>
-            <Text style={styles.username}>{item.name}</Text>
-            <Text style={styles.score}>
-              {item.score} / {champions?.length}
-            </Text>
-          </View>
-        )}
-      />
+      <View style={styles.leaderboard}>
+        <View style={styles.tableHeader}>
+          <Text style={styles.tableHeaderText}>Name</Text>
+          <Text style={styles.tableHeaderText}>Score</Text>
+        </View>
+        <ScrollView>
+          {sortedHighScores?.map((item, index) => (
+            <View key={index.toString()} style={styles.tableRow}>
+              <Text style={styles.tableCell}>{item.name}</Text>
+              <Text style={styles.tableCell}>
+                {item.score} / {champions?.length}
+              </Text>
+            </View>
+          ))}
+        </ScrollView>
+      </View>
     </View>
   );
 };
@@ -56,15 +61,8 @@ const Leaderboard = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
+    paddingHorizontal: 10,
     backgroundColor: 'black',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: 'white',
-    marginBottom: 20,
-    textAlign: 'center',
   },
   loadingContainer: {
     flex: 1,
@@ -86,6 +84,12 @@ const styles = StyleSheet.create({
     color: 'red',
     fontSize: 18,
   },
+  leaderboard: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 15, 15, 1)',
+    borderRadius: 10,
+    marginBottom: 30,
+  },
   scoreItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -98,6 +102,28 @@ const styles = StyleSheet.create({
     fontSize: 18,
   },
   score: {
+    color: 'white',
+    fontSize: 18,
+  },
+  tableHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    padding: 10,
+    backgroundColor: 'gray',
+  },
+  tableHeaderText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  tableRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    padding: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: 'gray',
+  },
+  tableCell: {
     color: 'white',
     fontSize: 18,
   },

@@ -36,6 +36,25 @@ export const getLives = async () => {
   }
 };
 
+export const saveScore = async (score: number | null) => {
+  if (score === null) return;
+  try {
+    await AsyncStorage.setItem('score', score.toString());
+  } catch (error) {
+    console.error('Failed to save score.', error);
+  }
+};
+
+export const getScore = async () => {
+  try {
+    const storedScore = await AsyncStorage.getItem('score');
+    return storedScore ? parseInt(storedScore, 10) : 0;
+  } catch (error) {
+    console.error('Failed to fetch score.', error);
+    return 0;
+  }
+};
+
 export const saveBookmarkedChampions = async (bookmarked: { [key: string]: boolean }) => {
   try {
     await AsyncStorage.setItem('bookmarkedChampions', JSON.stringify(bookmarked));

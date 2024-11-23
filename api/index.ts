@@ -1,9 +1,17 @@
 import { Champion, HighScore } from '@/types';
 import axios from 'axios';
+import axiosRetry from 'axios-retry';
+
+axiosRetry(axios, {
+  retries: 3,
+  retryDelay: (retryCount) => {
+    return axiosRetry.exponentialDelay(retryCount);
+  },
+});
 
 const fetchToken = async () => {
   try {
-    const response = await axios.get('https://sampleapis.assimilate.be/token?email=s151632@ap.be');
+    const response = await axios.get<{ token: string }>('https://sampleapis.assimilate.be/token?email=s151632@ap.be');
     return response.data.token;
   } catch (error) {
     console.error('Failed to fetch token.', error);
@@ -21,7 +29,7 @@ export const fetchChampions = async () => {
   }
 };
 
-export const postHighScore = async (name: string, score: number) => {
+export const postHighScore = async ({ name, score }: HighScore) => {
   try {
     const token = await fetchToken();
     const response = await axios.post<HighScore[]>(
@@ -43,7 +51,6 @@ export const postHighScore = async (name: string, score: number) => {
 export const fetchHighScores = async () => {
   try {
     const token = await fetchToken();
-    console.log('Token:', token);
     const response = await axios.get<HighScore[]>(`https://sampleapis.assimilate.be/game/scores`, {
       headers: {
         Authorization: `Bearer ${token}`,
