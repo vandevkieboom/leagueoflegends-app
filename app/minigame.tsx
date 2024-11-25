@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { fetchChampions, postHighScore } from '@/api';
+import { fetchChampions, postHighScore, fetchHighScores, updateHighScore } from '@/api';
 import { Champion, HighScore } from '@/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { FlatList, View, StyleSheet, Pressable, Image, TextInput, Text, ActivityIndicator, Modal } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { getCorrectGuesses, saveCorrectGuesses, getLives, saveLives, saveScore, getScore } from '@/storage';
+import stringSimilarity from 'string-similarity';
 
 interface MinigameProps {
   lives: number | null;
@@ -30,7 +31,7 @@ const Minigame = ({ lives, setLives }: MinigameProps) => {
     queryFn: fetchChampions,
   });
 
-  const { mutate } = useMutation({
+  const postMutation = useMutation({
     mutationFn: ({ name, score }: HighScore) => postHighScore({ name, score }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['highScores'] });
@@ -42,29 +43,69 @@ const Minigame = ({ lives, setLives }: MinigameProps) => {
     },
   });
 
-  const handleGuess = () => {
-    const lowercasedGuess = guess.toLowerCase();
-    if (champions && champions.some((champion) => champion.name.toLowerCase() === lowercasedGuess)) {
-      if (!correctGuesses.map((g) => g.toLowerCase()).includes(lowercasedGuess)) {
-        setCorrectGuesses((prevGuesses) => {
-          const newGuesses = [...prevGuesses, lowercasedGuess];
-          return newGuesses;
+  const updateMutation = useMutation({
+    mutationFn: ({ id = '', name, score }: HighScore) => updateHighScore({ id, name, score }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['highScores'] });
+      setIsGameOver(false);
+      handleReset();
+    },
+    onError: (error) => {
+      console.error('Error updating high score:', error);
+    },
+  });
+
+  const handlePostHighScore = async () => {
+    const highScores = await fetchHighScores();
+    const existingEntry = highScores.find((entry) => entry.name.toLowerCase() === playerName.toLowerCase());
+
+    if (existingEntry && existingEntry.id) {
+      if (score! > existingEntry.score) {
+        updateMutation.mutate({
+          id: existingEntry.id,
+          name: existingEntry.name,
+          score: score!,
         });
-        setInputBorderColor('green');
-        setScore((prevScore) => prevScore! + 1);
-      } else {
-        setInputBorderColor('orange');
       }
     } else {
-      setInputBorderColor('red');
-      setLives((prevLives) => {
-        const newLives = (prevLives ?? 1) - 1;
-        if (newLives <= 0) {
-          handleGameOver();
-          return 3;
+      postMutation.mutate({ name: playerName, score: score! });
+    }
+  };
+
+  const handleGuess = () => {
+    const normalizeName = (name: string) =>
+      name
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '')
+        .trim();
+
+    const normalizedGuess = normalizeName(guess);
+    if (champions) {
+      const match = champions.find(
+        (champion) => stringSimilarity.compareTwoStrings(normalizeName(champion.name), normalizedGuess) > 0.8
+      );
+      if (match) {
+        if (!correctGuesses.map((g) => normalizeName(g)).includes(normalizeName(match.name))) {
+          setCorrectGuesses((prevGuesses) => {
+            const newGuesses = [...prevGuesses, match.name];
+            return newGuesses;
+          });
+          setInputBorderColor('green');
+          setScore((prevScore) => prevScore! + 1);
+        } else {
+          setInputBorderColor('orange');
         }
-        return newLives;
-      });
+      } else {
+        setInputBorderColor('red');
+        setLives((prevLives) => {
+          const newLives = (prevLives ?? 1) - 1;
+          if (newLives <= 0) {
+            handleGameOver();
+            return 3;
+          }
+          return newLives;
+        });
+      }
     }
     setGuess('');
 
@@ -81,10 +122,6 @@ const Minigame = ({ lives, setLives }: MinigameProps) => {
 
   const handleGameOver = () => {
     setIsGameOver(true);
-  };
-
-  const handlePostHighScore = () => {
-    mutate({ name: playerName, score: score! });
   };
 
   useEffect(() => {

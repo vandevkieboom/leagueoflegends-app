@@ -25,6 +25,7 @@ export interface Info {
 }
 
 export interface HighScore {
+  id?: string;
   name: string;
   score: number;
 }

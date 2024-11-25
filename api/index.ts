@@ -29,6 +29,21 @@ export const fetchChampions = async () => {
   }
 };
 
+export const fetchHighScores = async () => {
+  try {
+    const token = await fetchToken();
+    const response = await axios.get<HighScore[]>(`https://sampleapis.assimilate.be/game/scores`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Failed to fetch high scores.', error);
+    throw error;
+  }
+};
+
 export const postHighScore = async ({ name, score }: HighScore) => {
   try {
     const token = await fetchToken();
@@ -48,17 +63,37 @@ export const postHighScore = async ({ name, score }: HighScore) => {
   }
 };
 
-export const fetchHighScores = async () => {
+export const updateHighScore = async ({ id, name, score }: { id: string; name: string; score: number }) => {
   try {
     const token = await fetchToken();
-    const response = await axios.get<HighScore[]>(`https://sampleapis.assimilate.be/game/scores`, {
+    const response = await axios.put<HighScore[]>(
+      `https://sampleapis.assimilate.be/game/scores/${id}`,
+      { name, score },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Error updating high score:', error);
+    throw error;
+  }
+};
+
+export const deleteHighScore = async (name: string) => {
+  try {
+    const token = await fetchToken();
+    const response = await axios.delete(`https://sampleapis.assimilate.be/game/scores`, {
+      data: { name },
       headers: {
         Authorization: `Bearer ${token}`,
       },
     });
     return response.data;
   } catch (error) {
-    console.error('Failed to fetch high scores.', error);
+    console.error('Error deleting high score:', error);
     throw error;
   }
 };
